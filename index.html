@@ -413,7 +413,9 @@ const OTHER = (CONFIG.categories.find(c => c.name === '其他') || CONFIG.catego
 const RM = window.matchMedia('(prefers-reduced-motion: reduce)');
 /* 手機判斷：沒有滑鼠游標、用手指點的裝置 */
 const IS_TOUCH = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
-const CAN_DIR = !IS_TOUCH && ('webkitdirectory' in document.createElement('input')); // 手機通常不能選整個資料夾
+// 能不能選整個資料夾：電腦大多可以；手機要 iOS 18.4 以上、Android Chrome 132 以上
+// 舊手機就算按了，也只會變成一般的選檔案，不會出錯
+const CAN_DIR = 'webkitdirectory' in document.createElement('input');
 const HAS_FS = 'showDirectoryPicker' in window;                                    // 「存到資料夾」需要的功能
 const isNarrow = () => window.innerWidth < 900;
 const SLOT = 18, GAP = 3, STEP = SLOT + GAP, PAD = 2;
@@ -1604,10 +1606,17 @@ RM.addEventListener && RM.addEventListener('change', startPileSpin);
   // 手機版文字與按鈕
   if (!CAN_DIR) document.querySelectorAll('[data-pick="folder"]').forEach(b => { b.hidden = true; });
   if (IS_TOUCH) {
-    document.querySelectorAll('[data-pick="files"]').forEach(b => { b.textContent = '選擇照片和影片'; b.classList.add('primary'); });
-    $('dropTitle').textContent = '從相簿加入照片和影片';
+    // 手機：「從相簿選」放第一個（主要按鈕），「選擇資料夾」放第二個
+    document.querySelectorAll('[data-pick="files"]').forEach(b => {
+      b.textContent = '從相簿選'; b.classList.add('primary');
+      b.parentNode.insertBefore(b, b.parentNode.firstChild);
+    });
+    document.querySelectorAll('[data-pick="folder"]').forEach(b => { b.classList.remove('primary'); });
+    $('dropTitle').textContent = '加入照片和影片';
     $('dropTiny').textContent = '只在這支手機處理，原始照片不會被移動或刪除';
-    $('addNote').textContent = '從相簿或「檔案」App 選照片和影片，可以一次選很多張。數量很多時建議分批，每次幾百張比較順。';
+    $('addNote').textContent = '從相簿選：可以一次勾很多張（iPhone 用手指在照片上拖過去就能連續勾選）。' +
+      '選擇資料夾：會打開「檔案」App，整個資料夾一次加入；但手機相簿不是資料夾，要先把照片存到「檔案」App 裡的資料夾才選得到。' +
+      '數量很多時建議分批，每次幾百張比較順。';
     $('addNote2').textContent = '只在這支手機處理，原始照片不會被移動、刪除或改名。';
     $('secKeys').hidden = true;
     el.btnSheets.textContent = '產生分類總表';
